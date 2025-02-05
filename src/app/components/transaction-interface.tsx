@@ -4,6 +4,7 @@ import { useState } from 'react';
 interface TransactionInterfaceProps {
   account: string;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function TransactionInterface({ account }:TransactionInterfaceProps) {
   const [token, setToken] = useState('');
   const [amount, setAmount] = useState('');

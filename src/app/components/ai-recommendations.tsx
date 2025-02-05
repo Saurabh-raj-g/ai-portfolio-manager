@@ -6,6 +6,7 @@ interface AIRecommendationsProps {
   portfolio: Position[]
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function AIRecommendations({ portfolio }:AIRecommendationsProps) {
   return (
     <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
