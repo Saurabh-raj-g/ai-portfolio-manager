@@ -10,6 +10,7 @@ import { Position } from '@/app/types/Index';
 import WalletNotConnectedPage from '@/app/components/wallte-not-connected';
 
 export default function Home() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [portfolio, setPortfolio] = useState<Position[]>([]);
   const { address } = useAccount();
  
