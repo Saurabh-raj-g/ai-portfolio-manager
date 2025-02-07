@@ -1,9 +1,9 @@
 'use client';
 
-import { Position } from "@/app/types/Index";
+import { TokenHolding } from "@/app/types/Index";
 
 interface AIRecommendationsProps {
-  portfolio: Position[]
+  portfolio: TokenHolding[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,12 +1,14 @@
+import { creatCDPWallet } from "@/app/ai-agent/cdpWalletProvider";
 import Chain from "@/app/value-objects/chain";
 import { NextRequest, NextResponse } from "next/server";
-import { getTokens } from "./get-tokens";
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const address = req.nextUrl.searchParams.get("address") as string;
-    const signature = req.nextUrl.searchParams.get("signature") as string;
-    const chain = req.nextUrl.searchParams.get("chain") as string;
+    const { address, signature, chain } = (await req.json()) as {
+      address: string;
+      signature: string;
+      chain: string;
+    };
 
     if(!address) {
       throw new Error("address is required");
@@ -24,12 +26,11 @@ export async function GET(req: NextRequest) {
       throw new Error("chain is not supported");
     };
 
-    const tokens = await getTokens(address, signature, chainObject);
+    await creatCDPWallet({ address, signature, chain:chainObject });
     
-    return NextResponse.json(tokens, { status: 200 });
+    return NextResponse.json({ message: "cdp wallet created"}, { status: 200 });
 
   } catch (error: unknown) {
-    console.error(error);
     return NextResponse.json(
       { message: (error as {message:string})?.message ?? error },
       { status: (error as {status:number})?.status ?? 500 },

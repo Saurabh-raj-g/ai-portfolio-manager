@@ -15,7 +15,13 @@ export async function cdpWalletProvider({ address, signature, chain }: WalletPro
   let walletDataStr: string | null = null;
 
   // Configure a file to persist the agent's CDP MPC Wallet Data
-  const WALLET_DATA_FILE = `${address}_.txt`;
+  const chainId = chain.getChainId();
+
+  if (!chainId) {
+    throw new Error("Chain ID not found");
+  }
+
+  const WALLET_DATA_FILE = `cdp-wallet-${chainId}-${address}-.txt`;
 
   // Read existing wallet data if available
   const FILE_EXISTS = fs.existsSync(WALLET_DATA_FILE);
@@ -42,7 +48,38 @@ export async function cdpWalletProvider({ address, signature, chain }: WalletPro
     const exportedWallet = await walletProvider.exportWallet();
     fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
   }
-  
   return walletProvider;
+}
+
+export async function createCDPWallet({ address, signature, chain }: WalletProviderProps){
+  verifyUser({ address, signature, chain });
+  
+  // Configure a file to persist the agent's CDP MPC Wallet Data
+  const chainId = chain.getChainId();
+
+  if (!chainId) {
+    throw new Error("Chain ID not found");
+  }
+
+  const WALLET_DATA_FILE = `cdp-wallet-${chainId}-${address}-.txt`;
+
+  // Read existing wallet data if available
+  const FILE_EXISTS = fs.existsSync(WALLET_DATA_FILE);
+
+  if (FILE_EXISTS) {
+    return;
+  }
+
+  const config = {
+    apiKeyName: process.env.CDP_API_KEY_NAME,
+    apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    networkId: chain.getName(),
+  };
+
+  const walletProvider = await CdpWalletProvider.configureWithWallet(config);
+ 
+  const exportedWallet = await walletProvider.exportWallet();
+
+  fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
 }
 

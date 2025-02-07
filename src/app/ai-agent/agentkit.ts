@@ -13,8 +13,6 @@ import { HumanMessage } from "@langchain/core/messages";
 import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
-import * as fs from "fs";
-import { getTokenHoldings } from "../web3/moralis";
 import { cdpWalletProvider } from "./cdpWalletProvider";
 import Chain from "../value-objects/chain";
 
@@ -152,31 +150,3 @@ export async function runChatMode(agent: any, config: any, userInput:string) {
     throw error;
   } 
 }
-
-export async function wallet() {
-  let walletDataStr: string | null = null;
-    // Configure a file to persist the agent's CDP MPC Wallet Data
-    const WALLET_DATA_FILE = "wallet_data.txt";
-
-    // Read existing wallet data if available
-    if (fs.existsSync(WALLET_DATA_FILE)) {
-      try {
-        walletDataStr = fs.readFileSync(WALLET_DATA_FILE, "utf8");
-      } catch (error) {
-        console.error("Error reading wallet data:", error);
-        // Continue without wallet data
-      }
-    }
-  const config = {
-    apiKeyName: process.env.CDP_API_KEY_NAME,
-    apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    cdpWalletData: walletDataStr || undefined,
-    networkId: process.env.NEXT_PUBLIC_NETWORK_ID || "base-sepolia",
-  };
-
-  const walletProvider = await CdpWalletProvider.configureWithWallet(config);
-  const pp = await getTokenHoldings(walletProvider);
-  console.log(pp[0]);
-  return pp;
-}
-
