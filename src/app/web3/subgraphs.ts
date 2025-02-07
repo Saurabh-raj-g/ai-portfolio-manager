@@ -1,23 +1,14 @@
 import { CdpWalletProvider } from "@coinbase/agentkit";
 import fetch from 'node-fetch';
+import { TokenHolding } from "@/app/types/Index";
  // write code for getting all the token holdings by the walletAddress
- export async function getTokenHoldings(walletProvider: CdpWalletProvider): Promise<TokenHolding[]> {
+  export async function getTokenHoldings(walletProvider: CdpWalletProvider): Promise<TokenHolding[]> {
     const address = walletProvider.getAddress();
     console.log("Wallet Address:", address);
     const networkId = walletProvider.getNetwork().networkId as string;
     const tokenHoldings = await getHoldingTokens(address, networkId);
     return tokenHoldings;
   }
-
-
-// Define the type for a token holding
-export type TokenHolding ={
-  tokenAddress: string;
-  balance: string;
-  decimals: number;
-  symbol: string;
-  name: string;
-}
 
 // Define subgraph endpoints for different chains
 const SUBGRAPH_URLS: Record<string, string> = {

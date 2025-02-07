@@ -1,6 +1,5 @@
 import {
   AgentKit,
-  CdpWalletProvider,
   wethActionProvider,
   walletActionProvider,
   erc20ActionProvider,
@@ -15,7 +14,9 @@ import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
 import * as fs from "fs";
-import { getTokenHoldings } from "./subgraphs";
+import { getTokenHoldings } from "../web3/moralis";
+import { cdpWalletProvider } from "./cdpWalletProvider";
+import Chain from "../value-objects/chain";
 
 /**
  * Validates that required environment variables are set
@@ -39,7 +40,6 @@ function validateEnvironment(): void {
     missingVars.forEach(varName => {
       console.error(`${varName}=your_${varName.toLowerCase()}_here`);
     });
-    process.exit(1);
   }
 
   // Warn about optional NETWORK_ID
@@ -56,40 +56,21 @@ validateEnvironment();
  *
  * @returns Agent executor and config
  */
-
+export interface InitializeAgentConfig {
+  address: string;
+  signature: string;
+  chain: Chain;
+}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function initializeAgent(): Promise<{ agent: any; config: any }> {
+export async function initializeAgent({address, signature, chain}:InitializeAgentConfig): Promise<{ agent: any; config: any }> {
   try {
-    console.log("Initializing agent...", process.env.OPENAI_API_KEY ? true : false);
     // Initialize LLM
     const llm = new ChatOpenAI({
       model: "gpt-4o-mini",
       apiKey: process.env.OPENAI_API_KEY,
     });
    
-    let walletDataStr: string | null = null;
-    // Configure a file to persist the agent's CDP MPC Wallet Data
-    const WALLET_DATA_FILE = "wallet_data.txt";
-
-    // Read existing wallet data if available
-    if (fs.existsSync(WALLET_DATA_FILE)) {
-      try {
-        walletDataStr = fs.readFileSync(WALLET_DATA_FILE, "utf8");
-      } catch (error) {
-        console.error("Error reading wallet data:", error);
-        // Continue without wallet data
-      }
-    }
-
-    // Configure CDP Wallet Provider
-    const config = {
-      apiKeyName: process.env.CDP_API_KEY_NAME,
-      apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      cdpWalletData: walletDataStr || undefined,
-      networkId: process.env.NEXT_PUBLIC_NETWORK_ID || "base-sepolia",
-    };
-
-    const walletProvider = await CdpWalletProvider.configureWithWallet(config);
+    const walletProvider = await cdpWalletProvider({address, signature, chain})
 
     // Initialize AgentKit
     const agentkit = await AgentKit.from({
@@ -132,17 +113,11 @@ export async function initializeAgent(): Promise<{ agent: any; config: any }> {
     });
 
     // Save wallet data
-    const exportedWallet = await walletProvider.exportWallet();
-    console.log("Exported wallet data:", exportedWallet);
     const walletAddress =  walletProvider.getAddress();
     console.log("Wallet Address:", walletAddress);
-   const balance = await walletProvider.getBalance();
+    const balance = await walletProvider.getBalance();
     console.log("Wallet Balance:", balance);
-  
-    // write code for getting all the token holdings by the walletAddress
-
-    //fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
-
+    
   return { agent, config: agentConfig };
   } catch (error) {
     console.error("Failed to initialize agent:", error);

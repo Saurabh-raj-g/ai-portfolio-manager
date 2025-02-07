@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeAgent, runChatMode, wallet } from "./agentkit";
+import { initializeAgent, runChatMode, wallet } from "@/app/ai-agent/agentkit";
 
 
 export async function POST(req: NextRequest) {
