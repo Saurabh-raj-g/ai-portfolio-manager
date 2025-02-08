@@ -26,9 +26,18 @@ export async function POST(req: NextRequest) {
       throw new Error("chain is not supported");
     };
 
-    const {cdpwalletAddress} = await createCDPWallet({ address, signature, chain:chainObject });
+    const {cdpwalletAddress, exportedWallet} = await createCDPWallet({ address, signature, chain:chainObject });
     
-    return NextResponse.json({ data: cdpwalletAddress}, { status: 200 });
+    // shake of simplicity use in the localstorage of user browser
+    const response = {
+      cdpwalletAddress,
+      cdpCredsentails: {
+        walletId: exportedWallet.walletId,
+        seed: exportedWallet.seed,
+        networkId: exportedWallet.networkId
+      }
+    }
+    return NextResponse.json({ data: response}, { status: 200 });
 
   } catch (error: unknown) {
     return NextResponse.json(
