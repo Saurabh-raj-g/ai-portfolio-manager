@@ -30,3 +30,9 @@ export type PortfolioResponse = {
     cdpwalletAddress: string | null;
   }
 }
+
+export type CDPWalletData = {
+  walletId: string; 
+  seed: string;
+  networkId: string 
+}

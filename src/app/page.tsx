@@ -2,12 +2,12 @@
 import { useState} from 'react';
 import PortfolioOverview from './components/portfolio-overview';
 import AIRecommendations from './components/ai-recommendations';
-import TransactionInterface from './components/transaction-interface';
 import { useAccount } from 'wagmi';
 import Header from '@/app/components/header';
 import Footer from '@/app/components/footer';
 import {TokenHolding } from '@/app/types/Index';
 import WalletNotConnectedPage from '@/app/components/wallte-not-connected';
+import { ApplicationStateProvider } from './providers/application-state-provider';
 
 // export const tokenHoldings: TokenHolding[] = [
 //   {
@@ -43,19 +43,20 @@ export default function Home() {
  
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-grow">
-        {address ? (
-          <div className="container mx-auto px-4 py-8">
-            <PortfolioOverview />
-            <AIRecommendations portfolio={portfolio} />
-            <TransactionInterface account={address} />
-          </div>
-        ) : (
-          <WalletNotConnectedPage />
-        )}
-      </main>
-      <Footer />
+      <ApplicationStateProvider>
+        <Header />
+        <main className="flex-grow">
+          {address ? (
+            <div className="container mx-auto px-4 py-8">
+              <PortfolioOverview />
+              <AIRecommendations portfolio={portfolio} />
+            </div>
+          ) : (
+            <WalletNotConnectedPage />
+          )}
+        </main>
+        <Footer />
+      </ApplicationStateProvider>
     </div>
   );
 }

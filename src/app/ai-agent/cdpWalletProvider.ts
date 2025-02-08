@@ -1,19 +1,29 @@
 import { CdpWalletProvider } from "@coinbase/agentkit";
 import Chain from "../value-objects/chain";
 import { verifyUser } from "../web3/verify-user";
-import * as fs from "fs";
+export interface CDPWalletConfig{
+  cdpWalletData: {
+    walletId: string;
+    seed: string;
+    networkId: string;
+  }
+}
 
-export interface WalletProviderProps {
+export interface WalletProviderProps extends CDPWalletConfig{
   address: string;
   signature: string;
   chain: Chain;
 }
-export async function cdpWalletProvider({ address, signature, chain }: WalletProviderProps) {
+
+export interface VerifyUserProps{
+  address: string;
+  signature: string;
+  chain: Chain;
+}
+export async function cdpWalletProvider({ address, signature, chain, cdpWalletData }: WalletProviderProps) {
   
   verifyUser({ address, signature, chain });
   
-  let walletDataStr: string | null = null;
-
   // Configure a file to persist the agent's CDP MPC Wallet Data
   const chainId = chain.getChainId();
 
@@ -21,19 +31,7 @@ export async function cdpWalletProvider({ address, signature, chain }: WalletPro
     throw new Error("Chain ID not found");
   }
 
-  const WALLET_DATA_FILE = `cdp-wallet-${chainId}-${address}-.txt`;
-
-  // Read existing wallet data if available
-  const FILE_EXISTS = fs.existsSync(WALLET_DATA_FILE);
-
-  if (FILE_EXISTS) {
-    try {
-      walletDataStr = fs.readFileSync(WALLET_DATA_FILE, "utf8");
-    } catch (error) {
-      console.error("Error reading wallet data:", error);
-      // Continue without wallet data
-    }
-  }
+  const walletDataStr = JSON.stringify(cdpWalletData);
 
   const config = {
     apiKeyName: process.env.CDP_API_KEY_NAME,
@@ -44,14 +42,10 @@ export async function cdpWalletProvider({ address, signature, chain }: WalletPro
 
   const walletProvider = await CdpWalletProvider.configureWithWallet(config);
  
-  if(!FILE_EXISTS){
-    const exportedWallet = await walletProvider.exportWallet();
-    fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
-  }
   return walletProvider;
 }
 
-export async function createCDPWallet({ address, signature, chain }: WalletProviderProps){
+export async function createCDPWallet({ address, signature, chain }: VerifyUserProps){
   verifyUser({ address, signature, chain });
   
   // Configure a file to persist the agent's CDP MPC Wallet Data
@@ -59,15 +53,6 @@ export async function createCDPWallet({ address, signature, chain }: WalletProvi
 
   if (!chainId) {
     throw new Error("Chain ID not found");
-  }
-
-  const WALLET_DATA_FILE = `cdp-wallet-${chainId}-${address}-.txt`;
-
-  // Read existing wallet data if available
-  const FILE_EXISTS = fs.existsSync(WALLET_DATA_FILE);
-
-  if (FILE_EXISTS) {
-    throw new Error("Wallet already exists");
   }
 
   const config = {
@@ -80,10 +65,8 @@ export async function createCDPWallet({ address, signature, chain }: WalletProvi
  
   const exportedWallet = await walletProvider.exportWallet();
 
-  fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
-
   const cdpwalletAddress = walletProvider.getAddress().toLowerCase();
 
-  return {cdpwalletAddress};
+  return {cdpwalletAddress, exportedWallet};
 }
 

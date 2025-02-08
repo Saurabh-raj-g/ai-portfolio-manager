@@ -1,61 +1,61 @@
 import axios from "axios";
-import { useCallback, useMemo} from "react";
-import { useAccount } from "wagmi";
 import Chain from "../value-objects/chain";
-import { PortfolioResponse, TokenHolding } from "../types/Index";
+import { CDPWalletData, PortfolioResponse, TokenHolding } from "../types/Index";
 
 export const useUserAsset = () => {
-  const {isConnected, address, chainId} =  useAccount();
- 
-  // Memoize values to avoid unnecessary re-renders
-  const signature = useMemo(
-    () => localStorage.getItem(`smartfolio-message-signature-${chainId}-${address}`) as string,
-    [chainId, address]
-  );
 
-  const storedChainId = useMemo(
-    () => localStorage.getItem(`smartfolio-${chainId}-${address}`) as string,
-    [chainId, address]
-  );
+  const getLocalStorageKey = (chainId: string, address:string, type: 'chain'|'signature'|'wallet-cred') => {
+    if(type === 'chain') return `smartfolio-${chainId}-${address}`;
+    if(type === 'signature') return `smartfolio-message-signature-${chainId}-${address}`;
+    if(type === 'wallet-cred') return `cdp-wallet-creds-${chainId}-${address}`;
+   
+    return "";
+  }
+  /** Fetch `cdpWalletData` from localStorage */
+  const fetchCdpWalletData = (chainId:string,address:string) => {
+    const data = localStorage.getItem(getLocalStorageKey(chainId,address,'wallet-cred'));
 
-  const chain = useMemo(() => Chain.fromUniqueProperty<Chain>("chainId", storedChainId), [storedChainId]);
+    return data ? 
+      JSON.parse(data)as CDPWalletData
+    : null;
+  };
 
-  const getPortofiloAssets = useCallback(async() => {
+  /** Fetch `storedChainId` from localStorage */
+  const fetchStoredChainId = (chainId:string,address:string) => {
+    const data = localStorage.getItem(getLocalStorageKey(chainId,address,'chain'));
+    const chain = data ?Chain.fromUniqueProperty<Chain>("chainId", data) : null;
+    return chain;
+  }; 
 
-    if(!isConnected || !address || !signature || chain.isUnknown()){
-      return {
-        tokens: [] as TokenHolding[],
-        cdpwalletAddress: null,
-      };
+  /** Fetch `signature` from localStorage */
+  const fetchSignature = (chainId:string,address:string) => {
+    const data = localStorage.getItem(getLocalStorageKey(chainId,address,'signature'));
+
+    return data ? data : null;
+  };
+
+  /** Fetch Portfolio Assets */
+  const getPortfolioAssets = async (address:string, signature:string, chain:Chain, cdpWalletData:CDPWalletData) => {
+    if (chain.isUnknown()) {
+      return { tokens: [] as TokenHolding[], cdpwalletAddress: null };
     }
-    
-    try{
 
-      const response = await axios.get<PortfolioResponse>(`/api/tokens-by-address`, {
-        params: {
-          address,
-          signature,
-          chain: chain.getChainId(),
-        },
-      })
+    try {
+      const response = await axios.post<PortfolioResponse>(`/api/tokens-by-address`, {
+        address,
+        signature,
+        chain: chain.getChainId(),
+        cdpWalletId: cdpWalletData.walletId,
+        cdpSeed: cdpWalletData.seed,
+        cdpNetworkId: cdpWalletData.networkId
+      });
+
       return response.data.data;
-      
-    }catch(error){
-      let message = ''
-      if (axios.isAxiosError(error)) {
-        message = error.response?.data.message || 'something went wrong'
-      } else {
-        message = (error as {message:string})?.message || 'something went wrong'
-      }
-      console.error(message);
-      return {
-        tokens: [] as TokenHolding[],
-        cdpwalletAddress: null,
-      };
+    } catch (error) {
+      console.error("Error fetching portfolio assets:", axios.isAxiosError(error) ? error.response?.data.message : error);
+      return { tokens: [] as TokenHolding[], cdpwalletAddress: null };
     }
-    
+  };
 
-  }, [isConnected, address, signature, chain]);
-
-  return { getPortofiloAssets, signature, chainId };
+  return { getPortfolioAssets, getLocalStorageKey,fetchCdpWalletData,fetchSignature, fetchStoredChainId };
 };

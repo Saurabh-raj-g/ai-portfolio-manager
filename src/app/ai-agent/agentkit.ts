@@ -13,7 +13,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
-import { cdpWalletProvider } from "./cdpWalletProvider";
+import { CDPWalletConfig, cdpWalletProvider } from "./cdpWalletProvider";
 import Chain from "../value-objects/chain";
 
 /**
@@ -54,13 +54,13 @@ validateEnvironment();
  *
  * @returns Agent executor and config
  */
-export interface InitializeAgentConfig {
+export interface InitializeAgentConfig extends CDPWalletConfig {
   address: string;
   signature: string;
   chain: Chain;
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function initializeAgent({address, signature, chain}:InitializeAgentConfig): Promise<{ agent: any; config: any }> {
+export async function initializeAgent({address, signature, chain, cdpWalletData}:InitializeAgentConfig): Promise<{ agent: any; config: any }> {
   try {
     // Initialize LLM
     const llm = new ChatOpenAI({
@@ -68,7 +68,7 @@ export async function initializeAgent({address, signature, chain}:InitializeAgen
       apiKey: process.env.OPENAI_API_KEY,
     });
    
-    const walletProvider = await cdpWalletProvider({address, signature, chain})
+    const walletProvider = await cdpWalletProvider({address, signature, chain, cdpWalletData})
 
     // Initialize AgentKit
     const agentkit = await AgentKit.from({
