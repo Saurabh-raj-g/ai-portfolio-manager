@@ -11,5 +11,7 @@ export async function getTokens(address: string, signature: string, chain: Chain
   
   const tokens = await getTokenHoldings(wallet);
 
-  return tokens;
+  const cdpwalletAddress = wallet.getAddress().toLowerCase();
+
+  return {tokens, cdpwalletAddress};
 }

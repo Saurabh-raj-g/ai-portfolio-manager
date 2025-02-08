@@ -22,3 +22,11 @@ export interface ValueObjectTypeOptions extends  ValueObjectType  {
   chainId?: number;
   hex?: string;
 };
+
+
+export type PortfolioResponse = {
+  data:{
+    tokens: TokenHolding[];
+    cdpwalletAddress: string | null;
+  }
+}

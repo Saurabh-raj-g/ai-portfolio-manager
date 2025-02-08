@@ -4,32 +4,39 @@ import {TokenHolding } from "@/app/types/Index";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useUserAsset } from '@/app/hooks/user-asset';
-import { tokenHoldings } from '../page';
+import { formatAddress } from '../utils/helper';
 
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function PortfolioOverview() {
   const {isConnected, address} =  useAccount();
-  const [assets, setAssets] = useState<TokenHolding[]>(tokenHoldings);
+  const [assetData, setAssetData] = useState<{tokens:TokenHolding[]; cdpwalletAddress:string|null}>({tokens:[], cdpwalletAddress:null});
+  const [copied, setCopied] = useState(false);
   const { getPortofiloAssets } = useUserAsset();
 
   const totalPortfolioValue = useMemo(() => {
-    return assets.reduce((total, asset) => {
-      return total + parseFloat(asset.usdPrice + "") ;
+    return assetData.tokens?.reduce((total, asset) => {
+      return total + (asset.usdPrice === null || asset.usdPrice === undefined ? 0: parseFloat(asset.usdPrice + ""));
     }, 0);
-  },[assets]);
+  },[assetData]);
+
+  // Copy total value to clipboard
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(assetData.cdpwalletAddress || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500); // Reset after 1.5 seconds
+  };
 
   // Memoize the function to prevent infinite loops
   const fetchAssets = useCallback(async () => {
     try {
       const data = await getPortofiloAssets();
-      if (data.length > 0) {
-        setAssets((prevAssets) => {
+      if (data.tokens.length > 0) {
+        setAssetData((prevAssetData) => {
           // Prevent unnecessary re-renders if the data is the same
-          if (JSON.stringify(prevAssets) !== JSON.stringify(data)) {
+          if (JSON.stringify(prevAssetData) !== JSON.stringify(data)) {
             return data;
           }
-          return prevAssets;
+          return prevAssetData;
         });
       }
     } catch (error) {
@@ -52,7 +59,16 @@ export default function PortfolioOverview() {
       transition={{ duration: 0.5 }}
       className="bg-gradient-to-br from-purple-800 to-indigo-900 text-white p-8 rounded-xl shadow-2xl mb-4"
     >
-      <h2 className="text-3xl font-bold mb-6">Portfolio Overview</h2>
+      <div className="flex justify-between items-center self-stretch mb-6">
+        <h2 className="text-3xl font-bold">Portfolio Overview</h2>
+        <div className='flex'>
+          <div className='text-gray-500'>Smart Address:</div>
+          <div className={`hover:cursor-pointer hover:text-white transition-colors duration-200 ${copied ? 'text-green-500' : 'text-gray-500'}`} 
+           onClick={copyToClipboard}>
+            {formatAddress(assetData.cdpwalletAddress)}
+          </div>
+        </div>
+      </div>
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
@@ -60,10 +76,10 @@ export default function PortfolioOverview() {
         className="bg-white/10 p-6 rounded-lg mb-6"
       >
         <p className="text-xl">Total Portfolio Value</p>
-        <p className="text-4xl font-bold">${totalPortfolioValue.toLocaleString()}</p>
+        <p className="text-4xl font-bold">${totalPortfolioValue?.toLocaleString()?? 0}</p>
       </motion.div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {assets.map((asset, index) => (
+        {assetData.tokens.map((asset, index) => (
           <motion.div
             key={asset.symbol}
             initial={{ opacity: 0, x: -20 }}
@@ -84,6 +100,22 @@ export default function PortfolioOverview() {
           </motion.div>
         ))}
       </div>
+      {
+        assetData.tokens.length !== 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="bg-gray-300 p-4 rounded-lg container mx-auto flex justify-center items-center w-1/2"
+          >
+            <div className="text-center mb-2">
+              <h3 className="text-lg font-bold text-gray-800">No assets deposited yet?</h3>
+              <h4 className='text-sm font-semibold text-gray-500'>copy your smart address and deposite your fund from your wallet based on your risk.</h4>
+              <h4 className='text-sm font-semibold text-gray-500'>rest will do your SmartFolio{"(your ai-agent)"}</h4>
+            </div>
+          </motion.div>
+        )
+      }
     </motion.div>
   );
 }

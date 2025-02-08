@@ -67,7 +67,7 @@ export async function createCDPWallet({ address, signature, chain }: WalletProvi
   const FILE_EXISTS = fs.existsSync(WALLET_DATA_FILE);
 
   if (FILE_EXISTS) {
-    return;
+    throw new Error("Wallet already exists");
   }
 
   const config = {
@@ -81,5 +81,9 @@ export async function createCDPWallet({ address, signature, chain }: WalletProvi
   const exportedWallet = await walletProvider.exportWallet();
 
   fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
+
+  const cdpwalletAddress = walletProvider.getAddress().toLowerCase();
+
+  return {cdpwalletAddress};
 }
 

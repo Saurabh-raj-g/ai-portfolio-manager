@@ -24,9 +24,9 @@ export async function GET(req: NextRequest) {
       throw new Error("chain is not supported");
     };
 
-    const tokens = await getTokens(address, signature, chainObject);
+    const {tokens,cdpwalletAddress} = await getTokens(address, signature, chainObject);
     
-    return NextResponse.json(tokens, { status: 200 });
+    return NextResponse.json({data:{tokens,cdpwalletAddress}}, { status: 200 });
 
   } catch (error: unknown) {
     console.error(error);

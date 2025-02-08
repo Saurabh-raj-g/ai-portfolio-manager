@@ -1,4 +1,4 @@
-import { creatCDPWallet } from "@/app/ai-agent/cdpWalletProvider";
+import { createCDPWallet } from "@/app/ai-agent/cdpWalletProvider";
 import Chain from "@/app/value-objects/chain";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
       throw new Error("chain is not supported");
     };
 
-    await creatCDPWallet({ address, signature, chain:chainObject });
+    const {cdpwalletAddress} = await createCDPWallet({ address, signature, chain:chainObject });
     
-    return NextResponse.json({ message: "cdp wallet created"}, { status: 200 });
+    return NextResponse.json({ data: cdpwalletAddress}, { status: 200 });
 
   } catch (error: unknown) {
     return NextResponse.json(

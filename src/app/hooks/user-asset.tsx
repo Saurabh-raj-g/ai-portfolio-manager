@@ -2,7 +2,7 @@ import axios from "axios";
 import { useCallback, useMemo} from "react";
 import { useAccount } from "wagmi";
 import Chain from "../value-objects/chain";
-import { TokenHolding } from "../types/Index";
+import { PortfolioResponse, TokenHolding } from "../types/Index";
 
 export const useUserAsset = () => {
   const {isConnected, address, chainId} =  useAccount();
@@ -23,19 +23,22 @@ export const useUserAsset = () => {
   const getPortofiloAssets = useCallback(async() => {
 
     if(!isConnected || !address || !signature || chain.isUnknown()){
-      return [];
+      return {
+        tokens: [] as TokenHolding[],
+        cdpwalletAddress: null,
+      };
     }
     
     try{
 
-      const response = await axios.get<TokenHolding[]>(`/api/tokens-by-address`, {
+      const response = await axios.get<PortfolioResponse>(`/api/tokens-by-address`, {
         params: {
           address,
           signature,
           chain: chain.getChainId(),
         },
       })
-      return response.data as TokenHolding[];
+      return response.data.data;
       
     }catch(error){
       let message = ''
@@ -45,7 +48,10 @@ export const useUserAsset = () => {
         message = (error as {message:string})?.message || 'something went wrong'
       }
       console.error(message);
-      return [];
+      return {
+        tokens: [] as TokenHolding[],
+        cdpwalletAddress: null,
+      };
     }
     
 
