@@ -1,7 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import {TokenHolding } from "@/app/types/Index";
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useUserAsset } from '@/app/hooks/user-asset';
 import { formatAddress } from '../utils/helper';
@@ -11,7 +11,7 @@ export default function PortfolioOverview() {
   const {isConnected, address} =  useAccount();
   const [assetData, setAssetData] = useState<{tokens:TokenHolding[]; cdpwalletAddress:string|null}>({tokens:[], cdpwalletAddress:null});
   const [copied, setCopied] = useState(false);
-  const { getPortofiloAssets } = useUserAsset();
+  const { getPortofiloAssets, cdpWalletData } = useUserAsset();
 
   const totalPortfolioValue = useMemo(() => {
     return assetData.tokens?.reduce((total, asset) => {
@@ -26,30 +26,30 @@ export default function PortfolioOverview() {
     setTimeout(() => setCopied(false), 1500); // Reset after 1.5 seconds
   };
 
-  // Memoize the function to prevent infinite loops
-  const fetchAssets = useCallback(async () => {
-    try {
-      const data = await getPortofiloAssets();
-      if (data.tokens.length > 0) {
-        setAssetData((prevAssetData) => {
-          // Prevent unnecessary re-renders if the data is the same
-          if (JSON.stringify(prevAssetData) !== JSON.stringify(data)) {
-            return data;
-          }
-          return prevAssetData;
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching portfolio:", error);
-    }
-  }, [getPortofiloAssets]);
-
-  // Fetch portfolio assets when the user connects
+  // Fetch portfolio assets when cdpWalletData is updated
   useEffect(() => {
-    if (isConnected && address) {
-      fetchAssets();
-    }
-  }, [isConnected, address, fetchAssets]);
+    const fetchAssets = async () => {
+      if (isConnected && address && cdpWalletData) {
+        try {
+          const data = await getPortofiloAssets();
+          if (data.tokens.length > 0) {
+            setAssetData(prevAssetData => {
+              // Prevent unnecessary updates
+              if (JSON.stringify(prevAssetData) !== JSON.stringify(data)) {
+                return data;
+              }
+              return prevAssetData;
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching portfolio:", error);
+        }
+      }
+    };
+
+    fetchAssets();
+  }, [isConnected, address, cdpWalletData, getPortofiloAssets]); // Ensure re-fetching when dependencies change
+
 
 
   return (
@@ -101,7 +101,7 @@ export default function PortfolioOverview() {
         ))}
       </div>
       {
-        assetData.tokens.length !== 0 && (
+        assetData.tokens.length === 0 && (
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
