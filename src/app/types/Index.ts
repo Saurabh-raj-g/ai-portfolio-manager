@@ -6,8 +6,13 @@ export type Position = {
 }
 
 export type BalanceData = {
+  ethBalance: string;
+  tokens: TokenBalanceData[];
+};
+
+export type TokenBalanceData = {
   balance: string;
-  tokenData: TokenMetadataResponse;
+  tokenMetadata: TokenMetadataResponse;
   isLong: Boolean;
   hrBalance: string;
 };
