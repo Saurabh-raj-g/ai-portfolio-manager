@@ -1,5 +1,4 @@
-// components/Header.tsx
-import React, { useMemo } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { ConnectWallet } from '@/app/components/buttons/connect-wallet';
 import { useAccount } from 'wagmi';
@@ -9,75 +8,58 @@ import { config } from '../configs/wagmi';
 import axios from 'axios';
 import Chain from '../value-objects/chain';
 import { useUserAsset } from '../hooks/user-asset';
+import { useApplicationState } from '../providers/application-state-provider';
 
 const Header: React.FC = () => {
-  const { address, isConnected, chainId } = useAccount();
-  const {cdpWalletData, signature,storedChain} = useUserAsset();
+  const { address, chainId } = useAccount();
+  const { getLocalStorageKey, fetchCdpWalletData, fetchSignature, fetchStoredChainId } = useUserAsset();
+  const {setLocalStorageState} = useApplicationState();
 
-  useMemo(async() => {
-    try{
-      if (isConnected && chainId && address) {
-        if(!cdpWalletData){
+  useEffect(() => {
+    const createCDPWalletIfRequired = async () => {
+      if (!chainId || !address) return;
+
+      const storedChain = fetchStoredChainId(chainId+"", address);
+      const cdpWalletData = fetchCdpWalletData(chainId+"", address);
+      const signature = fetchSignature(chainId+"", address);
+
+      try {
+        if (!cdpWalletData) {
           const chain = Chain.fromUniqueProperty<Chain>("chainId", chainId);
-          if(chain.isUnknown()){
-            alert(`chain is not supported! supported chains are ${Chain.getResourceArray().map((chain) => chain.name).join(", ")}`);
+          if (chain.isUnknown()) {
+            alert(`Chain not supported! Supported chains: ${Chain.getResourceArray().map((c) => c.name).join(", ")}`);
             return;
           }
 
-          // signature message
-          const messgae = getSignMessage();
-          const sign = await signMessage(config, {
-            message: messgae,
-          });
-  
-          const response = await axios.
-          post<
-            {
-              data: 
-              {
-                cdpwalletAddress: string;
-                cdpCredsentails: {
-                  walletId: string;
-                  seed: string;
-                  networkId: string;
-                }
-              }
-            }
-          >("/api/create-cdp-wallet-if-required", {
+          const message = getSignMessage();
+          const sign = await signMessage(config, { message });
+
+          const response = await axios.post("/api/create-cdp-wallet-if-required", {
             address,
             signature: sign,
             chain: chainId,
           });
-  
-          if(response.status === 200){
-            localStorage.setItem(`smartfolio-${chainId}-${address}`, chainId+'');
-            localStorage.setItem(`smartfolio-message-signature-${chainId}-${address}`, sign);
-            localStorage.setItem(`cdp-wallet-creds-${chainId}-${address}`, JSON.stringify(response.data.data.cdpCredsentails));
+
+          if (response.status === 200) {
+            localStorage.setItem(getLocalStorageKey(chainId+"",address,'chain'), chainId+"");
+            localStorage.setItem(getLocalStorageKey(chainId+"",address,'signature'), sign);
+            localStorage.setItem(getLocalStorageKey(chainId+"",address,'wallet-cred'), JSON.stringify(response.data.data.cdpCredsentails));
+            setLocalStorageState(true);
           }
-
-      }else if(!signature || !storedChain){
-          // signature message
-          const messgae = getSignMessage();
-          const sign = await signMessage(config, {
-            message: messgae,
-          });
-
-          localStorage.setItem(`smartfolio-${chainId}-${address}`, chainId+'');
-          localStorage.setItem(`smartfolio-message-signature-${chainId}-${address}`, sign);
-        
+        } else if (!signature || !storedChain) {
+          const message = getSignMessage();
+          const sign = await signMessage(config, { message });
+          localStorage.setItem(getLocalStorageKey(chainId+"",address,'chain'), chainId+"");
+          localStorage.setItem(getLocalStorageKey(chainId+"",address,'signature'), sign);
+          setLocalStorageState(true);
         }
+      } catch (error) {
+        console.error("Error fetching CDP wallet:", axios.isAxiosError(error) ? error.response?.data.message : error);
       }
-    }catch(error){
-      let message = ''
-      if (axios.isAxiosError(error)) {
-        message = error.response?.data.message || 'something went wrong'
-      } else {
-        message = (error as {message:string})?.message || 'something went wrong'
-      }
-      console.error(message);
-    }
-    
-  }, [isConnected, address, chainId, cdpWalletData, signature, storedChain]);
+    };
+
+    createCDPWalletIfRequired();
+  }, [address, chainId, fetchCdpWalletData, fetchSignature, fetchStoredChainId, getLocalStorageKey, setLocalStorageState]);
 
   return (
     <header className="bg-gradient-to-r from-purple-600 to-blue-600 p-4 shadow-lg">
