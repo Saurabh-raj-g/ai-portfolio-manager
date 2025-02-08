@@ -1,16 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-// import { initializeAgent, runChatMode } from "@/app/ai-agent/agentkit";
+import { initializeAgent, runChatMode } from "@/app/ai-agent/agentkit";
+import Chain from "@/app/value-objects/chain";
 
 export async function POST(req: NextRequest) {
   try {
-    const { userInput } = (await req.json()) as {
+    const { 
+      userInput,  
+      address, 
+      signature, 
+      chain, 
+      cdpWalletId, 
+      cdpSeed, 
+      cdpNetworkId
+    } = (await req.json()) as {
       userInput: string;
+      address: string;
+      signature: string;
+      chain: string;
+      cdpWalletId: string;
+      cdpSeed: string;
+      cdpNetworkId: string;
     };
-    if(!userInput) {
+    const chainObj = Chain.fromUniqueProperty<Chain>("chainId", chain);
+
+    if(chainObj.isUnknown()) {
+      throw new Error("Invalid chain");
+    }
+    if(!userInput || !chain || !cdpWalletId || !cdpSeed || !cdpNetworkId) {
       throw new Error("Invalid input");
     }
-    // const {agent, config} = await initializeAgent();
-    // await runChatMode(agent, config, userInput);
+
+    const cdpWalletData = {
+      walletId: cdpWalletId,
+      seed: cdpSeed,
+      networkId: cdpNetworkId,
+    }
+
+    const {agent, config} = await initializeAgent({address, signature, chain: chainObj, cdpWalletData});
+    await runChatMode(agent, config, userInput);
     
     return NextResponse.json({ data: "todo"}, { status: 200 });
     //return NextResponse.json({ message: "let's check what happend 😂" }, { status: 200 });

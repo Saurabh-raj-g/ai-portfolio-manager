@@ -15,6 +15,7 @@ import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
 import { CDPWalletConfig, cdpWalletProvider } from "./cdpWalletProvider";
 import Chain from "../value-objects/chain";
+import { agentRoleText } from "./agent-role-text";
 
 /**
  * Validates that required environment variables are set
@@ -99,22 +100,8 @@ export async function initializeAgent({address, signature, chain, cdpWalletData}
       llm,
       tools,
       checkpointSaver: memory,
-      messageModifier: `
-        You are a helpful agent that can interact onchain using the Coinbase Developer Platform AgentKit. You are 
-        empowered to interact onchain using your tools. If you ever need funds, you can request them from the 
-        faucet if you are on network ID 'base-sepolia'. If not, you can provide your wallet details and request 
-        funds from the user. Before executing your first action, get the wallet details to see what network 
-        you're on. only work on network ID 'base-sepolia'.  If there is a 5XX (internal) HTTP error code, ask the user to try again later. If someone 
-        asks you to do something you can't do with your currently available tools, say i can't do. If you have confusion or got ambiguous input from user then always clearify and then execute. Be concise and helpful with your responses. Refrain from 
-        restating your tools' descriptions unless it is explicitly requested.
-        `,
+      messageModifier: `${agentRoleText + "\n" }`,
     });
-
-    // Save wallet data
-    const walletAddress =  walletProvider.getAddress();
-    console.log("Wallet Address:", walletAddress);
-    const balance = await walletProvider.getBalance();
-    console.log("Wallet Balance:", balance);
     
   return { agent, config: agentConfig };
   } catch (error) {
@@ -130,7 +117,6 @@ export async function initializeAgent({address, signature, chain, cdpWalletData}
 export async function runChatMode(agent: any, config: any, userInput:string) {
   console.log("Starting chat mode... Type 'exit' to end.");
 
- 
   try {
     const stream = await agent.stream({ messages: [new HumanMessage(userInput)] }, config);
 

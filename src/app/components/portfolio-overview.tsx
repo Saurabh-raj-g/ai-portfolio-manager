@@ -42,6 +42,8 @@ export default function PortfolioOverview() {
         if(!cdpWalletData || !signature || !storedChain) return;
         try {
           const data = await getPortfolioAssets(address, signature, storedChain, cdpWalletData);
+          const filteredData = data.tokens.filter((token) => parseFloat(token.balance) > 0);
+          data.tokens = filteredData;
           if (JSON.stringify(assetData) !== JSON.stringify(data)) {
             setAssetData(data);
           }
