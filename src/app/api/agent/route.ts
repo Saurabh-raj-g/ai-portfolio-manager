@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeAgent, runChatMode, wallet } from "@/app/ai-agent/agentkit";
-
+// import { initializeAgent, runChatMode } from "@/app/ai-agent/agentkit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,9 +11,8 @@ export async function POST(req: NextRequest) {
     }
     // const {agent, config} = await initializeAgent();
     // await runChatMode(agent, config, userInput);
-    const tokens = await wallet();
     
-    return NextResponse.json({ data: tokens}, { status: 200 });
+    return NextResponse.json({ data: "todo"}, { status: 200 });
     //return NextResponse.json({ message: "let's check what happend 😂" }, { status: 200 });
   } catch (error: unknown) {
 

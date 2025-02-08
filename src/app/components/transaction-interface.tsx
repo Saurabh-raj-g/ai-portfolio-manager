@@ -8,7 +8,6 @@ interface TransactionInterfaceProps {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function TransactionInterface({ account }:TransactionInterfaceProps) {
   const [token, setToken] = useState('');
-  const [amount, setAmount] = useState('');
 
   const handleAddPosition = async (e: React.MouseEvent<HTMLButtonElement>) => {
     // Implement add position logic here
