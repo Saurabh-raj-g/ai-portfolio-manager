@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ConnectWallet } from '@/app/components/buttons/connect-wallet';
@@ -49,9 +50,11 @@ const Header: React.FC = () => {
           });
 
           if (response.status === 200) {
-            localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'chain'), chain.getChainId()+"");
-            localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'signature'), sign);
-            localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'wallet-cred'), JSON.stringify(response.data.data.cdpCredsentails));
+            if(typeof window !== 'undefined'){
+              window.localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'chain'), chain.getChainId()+"");
+              window.localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'signature'), sign);
+              window.localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'wallet-cred'), JSON.stringify(response.data.data.cdpCredsentails));
+            }
             const data = await getPortfolioAssets(address, sign, chain, response.data.data.cdpCredsentails);
             const filteredTokens = data.tokens.filter((token) => parseFloat(token.balance) > 0);
 
@@ -74,9 +77,10 @@ const Header: React.FC = () => {
 
           setTokenHoldings(filteredTokens);
           setCdpWalletAddress(data.cdpwalletAddress);
-          localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'chain'), chain.getChainId()+"");
-          localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'signature'), sign);
-          
+          if(typeof window !== 'undefined'){
+            window.localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'chain'), chain.getChainId()+"");
+            window.localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'signature'), sign);
+          }
         }
       } catch (error) {
         console.error("Error fetching CDP wallet:", axios.isAxiosError(error) ? error.response?.data.message : error);

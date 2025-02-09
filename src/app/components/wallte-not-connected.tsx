@@ -48,7 +48,7 @@ const WalletNotConnectedPage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7, duration: 0.5 }}
       >
-        Unlock the power of AI-driven portfolio management and optimize your DeFi investments across 20+ blockchains.
+        Unlock the power of Smart portfolio management and optimize your DeFi investments across 20+ blockchains.
       </motion.p>
       
       <motion.div
