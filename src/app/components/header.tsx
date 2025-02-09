@@ -4,7 +4,7 @@ import { ConnectWallet } from '@/app/components/buttons/connect-wallet';
 import { useAccount } from 'wagmi';
 import { getSignMessage } from '../web3/sign-message-generator';
 import { signMessage } from "@wagmi/core";
-import { getConfig } from '../configs/wagmi';
+import { config } from '../configs/wagmi';
 import axios from 'axios';
 import Chain from '../value-objects/chain';
 import { useUserAsset } from '../hooks/user-asset';
@@ -38,9 +38,8 @@ const Header: React.FC = () => {
             alert(`Chain not supported! Supported chains: ${Chain.getResourceArray().map((c) => c.name).join(", ")}`);
             return;
           }
-
           const message = getSignMessage();
-          const sign = await signMessage(getConfig(), { message });
+          const sign = await signMessage(config, { message });
 
           const response = await axios.post("/api/create-cdp-wallet-if-required", {
             address,
@@ -64,7 +63,7 @@ const Header: React.FC = () => {
             return;
           }
           const message = getSignMessage();
-          const sign = await signMessage(getConfig(), { message });
+          const sign = await signMessage(config, { message });
           localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'chain'), chain.getChainId()+"");
           localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'signature'), sign);
           setLocalStorageState(true);

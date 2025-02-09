@@ -52,3 +52,14 @@ export function getConfig() {
       },
    });
 }
+export const config = createConfig({
+   chains: [base],
+   ssr: true,
+   storage: createStorage({
+         storage: cookieStorage,
+      }),
+   transports: {
+      [base.id]: http(),
+      //  [baseSepolia.id]: http(),
+   }
+});
