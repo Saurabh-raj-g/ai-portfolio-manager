@@ -1,11 +1,9 @@
 'use client';
-import { useState} from 'react';
 import PortfolioOverview from './components/portfolio-overview';
 import AIRecommendations from './components/ai-recommendations';
 import { useAccount } from 'wagmi';
 import Header from '@/app/components/header';
 import Footer from '@/app/components/footer';
-import {TokenHolding } from '@/app/types/Index';
 import WalletNotConnectedPage from '@/app/components/wallte-not-connected';
 import { ApplicationStateProvider } from './providers/application-state-provider';
 
@@ -37,8 +35,6 @@ import { ApplicationStateProvider } from './providers/application-state-provider
 // ];
 
 export default function Home() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [portfolio, setPortfolio] = useState<TokenHolding[]>([]);
   const { address } = useAccount();
  
   return (
@@ -49,7 +45,7 @@ export default function Home() {
           {address ? (
             <div className="container mx-auto px-4 py-8">
               <PortfolioOverview />
-              <AIRecommendations portfolio={portfolio} />
+              <AIRecommendations/>
             </div>
           ) : (
             <WalletNotConnectedPage />

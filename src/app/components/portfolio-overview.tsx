@@ -1,31 +1,27 @@
 'use client';
 import { motion } from 'framer-motion';
-import { TokenHolding } from "@/app/types/Index";
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useUserAsset } from '@/app/hooks/user-asset';
 import { formatAddress } from '../utils/helper';
 import { useApplicationState } from '../providers/application-state-provider';
+import { ButtonOutline } from './buttons/button-outline';
 
 export default function PortfolioOverview() {
   const { address, chainId } = useAccount();
-  const [assetData, setAssetData] = useState<{ tokens: TokenHolding[]; cdpwalletAddress: string | null }>({
-    tokens: [],
-    cdpwalletAddress: null
-  });
   const [copied, setCopied] = useState(false);
   const { getPortfolioAssets, fetchCdpWalletData, fetchSignature, fetchStoredChainId } = useUserAsset();
-  const {isLocalStorageChanged} = useApplicationState();
+  const { tokenHoldings, setCdpWalletAddress, cdpWalletAddress, setTokenHoldings } = useApplicationState();
 
   const totalPortfolioValue = useMemo(() => {
-    return assetData.tokens.reduce((total, asset) => {
-      const price = asset.usdPrice !== null && asset.usdPrice !== undefined ? parseFloat(asset.usdPrice + "") : 0;
-      return total + price;
+    return tokenHoldings.reduce((total, asset) => {
+      const price = asset.usdPrice ? parseFloat(asset.usdPrice.toString()) : 0;
+      return total + price * parseFloat(asset.balance);
     }, 0);
-  }, [assetData]);
+  }, [tokenHoldings]);
 
   const copyToClipboard = () => {
-    const textToCopy = assetData.cdpwalletAddress || "";
+    const textToCopy = cdpWalletAddress || "";
     if (textToCopy) {
       navigator.clipboard.writeText(textToCopy);
       setCopied(true);
@@ -33,27 +29,32 @@ export default function PortfolioOverview() {
     }
   };
 
-  useEffect(() => {
-    const fetchAssets = async () => {
-      if (address) {
-        const cdpWalletData = fetchCdpWalletData(chainId+"",address);
-        const signature = fetchSignature(chainId+"",address);
-        const storedChain = fetchStoredChainId(chainId+"",address);
-        if(!cdpWalletData || !signature || !storedChain) return;
-        try {
-          const data = await getPortfolioAssets(address, signature, storedChain, cdpWalletData);
-          if (JSON.stringify(assetData) !== JSON.stringify(data)) {
-            setAssetData(data);
-          }
-        } catch (error) {
-          console.error("Error fetching portfolio:", error);
-        }
+  /** 🔥 **Fix: useCallback prevents function recreation** */
+  const fetchAssets = async () => {
+    if (!address) return;
+
+    try {
+      const cdpWalletData = fetchCdpWalletData(chainId + "", address);
+      const signature = fetchSignature(chainId + "", address);
+      const storedChain = fetchStoredChainId(chainId + "", address);
+
+      if (!cdpWalletData || !signature || !storedChain) {
+        alert("Please connect your wallet first");
+        return;
       }
-    };
 
-    fetchAssets();
-  }, [fetchSignature, address, fetchCdpWalletData, chainId, getPortfolioAssets, fetchStoredChainId, assetData, isLocalStorageChanged]);
 
+      const data = await getPortfolioAssets(address, signature, storedChain, cdpWalletData);
+      const filteredTokens = data.tokens.filter((token) => parseFloat(token.balance) > 0);
+
+      setTokenHoldings(filteredTokens);
+      setCdpWalletAddress(data.cdpwalletAddress);
+    
+    } catch (error) {
+      console.error("Error fetching portfolio:", error);
+    }
+  };
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -63,15 +64,27 @@ export default function PortfolioOverview() {
     >
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold">Portfolio Overview</h2>
-        <div className="flex items-center space-x-2">
-          <div className="text-gray-500">Smart Address:</div>
-          <div
-            className={`cursor-pointer ${copied ? 'text-green-500' : 'text-gray-500'} hover:text-white transition`}
-            onClick={copyToClipboard}
-          >
-            {formatAddress(assetData.cdpwalletAddress)}
+        { cdpWalletAddress  && tokenHoldings.length === 0 && 
+          ( 
+            <div className="flex items-center space-x-2">
+              <div className="text-gray-500">Smart Address:</div>
+              <div
+                className={`cursor-pointer ${copied ? 'text-green-500' : 'text-gray-500'} hover:text-white transition`}
+                onClick={copyToClipboard}
+              >
+                {formatAddress(cdpWalletAddress)}
+              </div>
+            </div>
+          )
+        }
+        { cdpWalletAddress && tokenHoldings.length > 0 &&
+          <div className="flex items-center space-x-2">
+            <ButtonOutline onClick={fetchAssets}>
+                fetch Assets
+            </ButtonOutline>
           </div>
-        </div>
+        }
+        
       </div>
 
       <motion.div
@@ -80,13 +93,22 @@ export default function PortfolioOverview() {
         transition={{ duration: 0.3 }}
         className="bg-white/10 p-6 rounded-lg mb-6"
       >
+        <div className="flex items-center space-x-2">
+          <div className="text-gray-500">Smart Address:</div>
+          <div
+            className={`cursor-pointer ${copied ? 'text-green-500' : 'text-gray-500'} hover:text-white transition`}
+            onClick={copyToClipboard}
+          >
+            {formatAddress(cdpWalletAddress)}
+          </div>
+        </div>
         <p className="text-xl">Total Portfolio Value</p>
         <p className="text-4xl font-bold">${totalPortfolioValue?.toLocaleString() ?? 0}</p>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {assetData.tokens.length > 0 ? (
-          assetData.tokens.map((asset, index) => (
+        {tokenHoldings.length > 0 ? (
+          tokenHoldings.map((asset, index) => (
             <motion.div
               key={asset.symbol}
               initial={{ opacity: 0, x: -20 }}

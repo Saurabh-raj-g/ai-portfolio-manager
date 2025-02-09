@@ -2,6 +2,7 @@ import { CdpWalletProvider } from '@coinbase/agentkit';
 import Moralis from 'moralis';
 import { EvmChain } from "@moralisweb3/common-evm-utils";
 import { TokenHolding } from '@/app/types/Index';
+import Chain from '../value-objects/chain';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -37,8 +38,9 @@ export async function getTokenHoldings(walletProvider: CdpWalletProvider): Promi
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let response: any = {};
     try{
+      const chain = getHexChainId(walletProvider.getNetwork().networkId as string);
       response = await Moralis.EvmApi.wallets.getWalletTokenBalancesPrice({
-        "chain": EvmChain.BASE_SEPOLIA.apiHex,
+        "chain": chain,
         "address": address
       });
     }catch(error){
@@ -77,4 +79,12 @@ export async function getTokenHoldings(walletProvider: CdpWalletProvider): Promi
     throw error;
   }
 }
-  
+
+export function getHexChainId(networkId: string): string {
+  const chain = Chain.fromName<Chain>(networkId);
+
+  if(chain.isBase()) return EvmChain.BASE.apiHex;
+  if(chain.isBaseSepolia()) return EvmChain.BASE_SEPOLIA.apiHex;
+
+  throw new Error("Unknown chain");
+}

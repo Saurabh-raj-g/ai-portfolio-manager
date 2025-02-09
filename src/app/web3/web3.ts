@@ -1,5 +1,5 @@
 import Web3 from "web3";
-import {baseSepolia} from "wagmi/chains";
+import {baseSepolia, base} from "wagmi/chains";
 import Chain from "@/app/value-objects/chain";
 
 
@@ -12,6 +12,10 @@ export default class Web3Service {
     
     if(chain.isBaseSepolia()) {
       return new Web3.providers.HttpProvider(baseSepolia.rpcUrls.default.http[0]);
+    }
+
+    if(chain.isBase()) {
+      return new Web3.providers.HttpProvider(base.rpcUrls.default.http[0]);
     }
 
     throw new Error("Chain is not supported");

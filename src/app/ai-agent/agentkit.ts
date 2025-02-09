@@ -15,6 +15,8 @@ import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
 import { CDPWalletConfig, cdpWalletProvider } from "./cdpWalletProvider";
 import Chain from "../value-objects/chain";
+import { agentBaseInstruction } from "./agent-base-instructions";
+import { dataFormatInstructions } from "./user-instructions";
 
 /**
  * Validates that required environment variables are set
@@ -99,23 +101,12 @@ export async function initializeAgent({address, signature, chain, cdpWalletData}
       llm,
       tools,
       checkpointSaver: memory,
-      messageModifier: `
-        You are a helpful agent that can interact onchain using the Coinbase Developer Platform AgentKit. You are 
-        empowered to interact onchain using your tools. If you ever need funds, you can request them from the 
-        faucet if you are on network ID 'base-sepolia'. If not, you can provide your wallet details and request 
-        funds from the user. Before executing your first action, get the wallet details to see what network 
-        you're on. only work on network ID 'base-sepolia'.  If there is a 5XX (internal) HTTP error code, ask the user to try again later. If someone 
-        asks you to do something you can't do with your currently available tools, say i can't do. If you have confusion or got ambiguous input from user then always clearify and then execute. Be concise and helpful with your responses. Refrain from 
-        restating your tools' descriptions unless it is explicitly requested.
-        `,
+      messageModifier: `${agentBaseInstruction.agentInstructions}\n${agentBaseInstruction.tradingAgentInstructions}\n${agentBaseInstruction.riskRecommendationInstructions}`,
     });
-
-    // Save wallet data
-    const walletAddress =  walletProvider.getAddress();
-    console.log("Wallet Address:", walletAddress);
-    const balance = await walletProvider.getBalance();
-    console.log("Wallet Balance:", balance);
-    
+    const pp = await walletProvider.exportWallet()
+    console.log("walletProvider: ", pp)
+    const wallet = walletProvider.getNetwork().networkId;
+    console.log("wallet: ", wallet)
   return { agent, config: agentConfig };
   } catch (error) {
     console.error("Failed to initialize agent:", error);
@@ -129,19 +120,46 @@ export async function initializeAgent({address, signature, chain, cdpWalletData}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function runChatMode(agent: any, config: any, userInput:string) {
   console.log("Starting chat mode... Type 'exit' to end.");
-
- 
+  const agentReplies = [];
   try {
     const stream = await agent.stream({ messages: [new HumanMessage(userInput)] }, config);
 
     for await (const chunk of stream) {
-      if ("agent" in chunk) {
-        console.log("agent: ", chunk.agent.messages[0].content);
-      } else if ("tools" in chunk) {
+      // if ("agent" in chunk) {
+      //   console.log("agent: ", chunk.agent.messages[0].content);
+      // } else if ("tools" in chunk) {
+      //   console.log("tools: ", chunk.tools.messages[0].content);
+      // }
+      // console.log("-------------------");
+      // get agent replies
+      if ("tools" in chunk) {
         console.log("tools: ", chunk.tools.messages[0].content);
       }
-      console.log("-------------------");
+      if ("agent" in chunk) {
+        agentReplies.push(chunk.agent.messages[0].content);
+      }
     }
+    console.log("Chat mode ended.");
+    const filteredReplies = agentReplies.filter((reply) => reply !== "" || reply !== null || reply !== undefined);
+    
+    const query = {
+      dataFormatInstructions,
+      data: filteredReplies
+    };
+
+    const stream1 = await agent.stream({ messages: [new HumanMessage(JSON.stringify(query))] }, config);
+
+    let finalReplies = [];
+    for await (const chunk of stream1) {
+    
+      if ("agent" in chunk) {
+        finalReplies.push(chunk.agent.messages[0].content);
+      }
+    }
+    console.log("filter ");
+    finalReplies = finalReplies.filter((reply) => reply !== "" || reply !== null || reply !== undefined);
+
+    return finalReplies;
   } catch (error) {
     if (error instanceof Error) {
       console.error("Error:", error.message);
