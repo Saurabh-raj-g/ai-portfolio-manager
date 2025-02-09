@@ -15,12 +15,12 @@ export default function PortfolioOverview() {
   });
   const [copied, setCopied] = useState(false);
   const { getPortfolioAssets, fetchCdpWalletData, fetchSignature, fetchStoredChainId } = useUserAsset();
-  const {isLocalStorageChanged} = useApplicationState();
+  const {isLocalStorageChanged, setTokenHoldings} = useApplicationState();
 
   const totalPortfolioValue = useMemo(() => {
     return assetData.tokens.reduce((total, asset) => {
       const price = asset.usdPrice !== null && asset.usdPrice !== undefined ? parseFloat(asset.usdPrice + "") : 0;
-      return total + price;
+      return total + (price*parseFloat(asset.balance));
     }, 0);
   }, [assetData]);
 
@@ -39,13 +39,18 @@ export default function PortfolioOverview() {
         const cdpWalletData = fetchCdpWalletData(chainId+"",address);
         const signature = fetchSignature(chainId+"",address);
         const storedChain = fetchStoredChainId(chainId+"",address);
-        if(!cdpWalletData || !signature || !storedChain) return;
+        if(!cdpWalletData || !signature || !storedChain) {
+          setAssetData({ tokens: [], cdpwalletAddress: null });
+          setTokenHoldings([]);
+          return;
+        }
         try {
           const data = await getPortfolioAssets(address, signature, storedChain, cdpWalletData);
           const filteredData = data.tokens.filter((token) => parseFloat(token.balance) > 0);
           data.tokens = filteredData;
           if (JSON.stringify(assetData) !== JSON.stringify(data)) {
             setAssetData(data);
+            setTokenHoldings(data.tokens);
           }
         } catch (error) {
           console.error("Error fetching portfolio:", error);
@@ -54,7 +59,7 @@ export default function PortfolioOverview() {
     };
 
     fetchAssets();
-  }, [fetchSignature, address, fetchCdpWalletData, chainId, getPortfolioAssets, fetchStoredChainId, assetData, isLocalStorageChanged]);
+  }, [fetchSignature, address, fetchCdpWalletData, chainId, getPortfolioAssets, fetchStoredChainId, assetData, isLocalStorageChanged, setTokenHoldings]);
 
   return (
     <motion.div

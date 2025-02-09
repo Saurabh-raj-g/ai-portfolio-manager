@@ -15,7 +15,8 @@ import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
 import { CDPWalletConfig, cdpWalletProvider } from "./cdpWalletProvider";
 import Chain from "../value-objects/chain";
-import { agentRoleText } from "./agent-role-text";
+import { agentBaseInstruction } from "./agent-base-instructions";
+import { dataFormatInstructions } from "./user-instructions";
 
 /**
  * Validates that required environment variables are set
@@ -100,9 +101,12 @@ export async function initializeAgent({address, signature, chain, cdpWalletData}
       llm,
       tools,
       checkpointSaver: memory,
-      messageModifier: `${agentRoleText + "\n" }`,
+      messageModifier: `${agentBaseInstruction.agentInstructions}\n${agentBaseInstruction.tradingAgentInstructions}\n${agentBaseInstruction.riskRecommendationInstructions}`,
     });
-    
+    const pp = await walletProvider.exportWallet()
+    console.log("walletProvider: ", pp)
+    const wallet = walletProvider.getNetwork().networkId;
+    console.log("wallet: ", wallet)
   return { agent, config: agentConfig };
   } catch (error) {
     console.error("Failed to initialize agent:", error);
@@ -116,18 +120,46 @@ export async function initializeAgent({address, signature, chain, cdpWalletData}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function runChatMode(agent: any, config: any, userInput:string) {
   console.log("Starting chat mode... Type 'exit' to end.");
-
+  const agentReplies = [];
   try {
     const stream = await agent.stream({ messages: [new HumanMessage(userInput)] }, config);
 
     for await (const chunk of stream) {
-      if ("agent" in chunk) {
-        console.log("agent: ", chunk.agent.messages[0].content);
-      } else if ("tools" in chunk) {
+      // if ("agent" in chunk) {
+      //   console.log("agent: ", chunk.agent.messages[0].content);
+      // } else if ("tools" in chunk) {
+      //   console.log("tools: ", chunk.tools.messages[0].content);
+      // }
+      // console.log("-------------------");
+      // get agent replies
+      if ("tools" in chunk) {
         console.log("tools: ", chunk.tools.messages[0].content);
       }
-      console.log("-------------------");
+      if ("agent" in chunk) {
+        agentReplies.push(chunk.agent.messages[0].content);
+      }
     }
+    console.log("Chat mode ended.");
+    const filteredReplies = agentReplies.filter((reply) => reply !== "" || reply !== null || reply !== undefined);
+    
+    const query = {
+      dataFormatInstructions,
+      data: filteredReplies
+    };
+
+    const stream1 = await agent.stream({ messages: [new HumanMessage(JSON.stringify(query))] }, config);
+
+    let finalReplies = [];
+    for await (const chunk of stream1) {
+    
+      if ("agent" in chunk) {
+        finalReplies.push(chunk.agent.messages[0].content);
+      }
+    }
+    console.log("filter ");
+    finalReplies = finalReplies.filter((reply) => reply !== "" || reply !== null || reply !== undefined);
+
+    return finalReplies;
   } catch (error) {
     if (error instanceof Error) {
       console.error("Error:", error.message);

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeAgent, runChatMode } from "@/app/ai-agent/agentkit";
 import Chain from "@/app/value-objects/chain";
+import { getRiskAndRecommendation } from "./get-risk-recommendation";
 
 export async function POST(req: NextRequest) {
   try {
     const { 
-      userInput,  
       address, 
       signature, 
       chain, 
@@ -13,7 +12,6 @@ export async function POST(req: NextRequest) {
       cdpSeed, 
       cdpNetworkId
     } = (await req.json()) as {
-      userInput: string;
       address: string;
       signature: string;
       chain: string;
@@ -26,7 +24,7 @@ export async function POST(req: NextRequest) {
     if(chainObj.isUnknown()) {
       throw new Error("Invalid chain");
     }
-    if(!userInput || !address || !signature|| !cdpWalletId || !cdpSeed || !cdpNetworkId) {
+    if(!address || !signature || !cdpWalletId || !cdpSeed || !cdpNetworkId) {
       throw new Error("Invalid input");
     }
 
@@ -35,13 +33,9 @@ export async function POST(req: NextRequest) {
       seed: cdpSeed,
       networkId: cdpNetworkId,
     }
-
-    const {agent, config} = await initializeAgent({address, signature, chain: chainObj, cdpWalletData});
     
-    const data = await runChatMode(agent, config, userInput);
-    
+    const data = await getRiskAndRecommendation(address, signature, chainObj, {cdpWalletData});
     return NextResponse.json({ data}, { status: 200 });
-    
   } catch (error: unknown) {
 
     return NextResponse.json(
