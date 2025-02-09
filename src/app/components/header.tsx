@@ -10,11 +10,12 @@ import Chain from '../value-objects/chain';
 import { useUserAsset } from '../hooks/user-asset';
 import { useApplicationState } from '../providers/application-state-provider';
 import { CDPWalletData } from '../types/Index';
+import { ButtonOutline } from './buttons/button-outline';
 
 const Header: React.FC = () => {
   const { address, chainId } = useAccount();
-  const { sendCommandToAiAgent ,getLocalStorageKey, fetchCdpWalletData, fetchSignature, fetchStoredChainId, getLatestAiRecommendationsLocal} = useUserAsset();
-  const {setLocalStorageState, tokenHoldings} = useApplicationState();
+  const {getPortfolioAssets, sendCommandToAiAgent ,getLocalStorageKey, fetchCdpWalletData, fetchSignature, fetchStoredChainId, getLatestAiRecommendationsLocal} = useUserAsset();
+  const {setCdpWalletAddress,setTokenHoldings,  tokenHoldings} = useApplicationState();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [inputText, setInputText] = useState<string>('');
   
@@ -51,7 +52,11 @@ const Header: React.FC = () => {
             localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'chain'), chain.getChainId()+"");
             localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'signature'), sign);
             localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'wallet-cred'), JSON.stringify(response.data.data.cdpCredsentails));
-            setLocalStorageState(true);
+            const data = await getPortfolioAssets(address, sign, chain, response.data.data.cdpCredsentails);
+            const filteredTokens = data.tokens.filter((token) => parseFloat(token.balance) > 0);
+
+            setTokenHoldings(filteredTokens);
+            setCdpWalletAddress(data.cdpwalletAddress);
           }
         } else if (!signature || !storedChain) {
           if(!chain.isBase()){
@@ -64,9 +69,14 @@ const Header: React.FC = () => {
           }
           const message = getSignMessage();
           const sign = await signMessage(config, { message });
+          const data = await getPortfolioAssets(address, sign, chain, cdpWalletData);
+          const filteredTokens = data.tokens.filter((token) => parseFloat(token.balance) > 0);
+
+          setTokenHoldings(filteredTokens);
+          setCdpWalletAddress(data.cdpwalletAddress);
           localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'chain'), chain.getChainId()+"");
           localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'signature'), sign);
-          setLocalStorageState(true);
+          
         }
       } catch (error) {
         console.error("Error fetching CDP wallet:", axios.isAxiosError(error) ? error.response?.data.message : error);
@@ -74,9 +84,20 @@ const Header: React.FC = () => {
     };
 
     createCDPWalletIfRequired();
-  }, [address, chainId, fetchCdpWalletData, fetchSignature, fetchStoredChainId, getLocalStorageKey, setLocalStorageState]);
+  }, [address, chainId, fetchCdpWalletData, fetchSignature, fetchStoredChainId, getLocalStorageKey, getPortfolioAssets, setCdpWalletAddress, setTokenHoldings]);
 
 
+  const fetchAssets = async () => {
+    const chain = Chain.fromUniqueProperty<Chain>("chainId", chainId+"");
+    const cdpWalletData = fetchCdpWalletData(chain.getChainId()+"", address as string);
+    const signature = fetchSignature(chain.getChainId()+"", address as string);
+
+    const data = await getPortfolioAssets(address as string, signature as string, chain, cdpWalletData!);
+    const filteredTokens = data.tokens.filter((token) => parseFloat(token.balance) > 0);
+
+    setTokenHoldings(filteredTokens);
+    setCdpWalletAddress(data.cdpwalletAddress);
+  };
   const handleChatIconClick = () => {
     setIsModalOpen(true);
   };
@@ -109,17 +130,18 @@ const Header: React.FC = () => {
         requiredInfo: latestLocalData
       }
       try{
-        setLocalStorageState(false);
         console.log("userInput", userInput);
         const data = await sendCommandToAiAgent(JSON.stringify(userInput), address as string, signature as string, storedChain, cdpWalletData as CDPWalletData);
-        
+        const portfolioData = await getPortfolioAssets(address as string, signature as string, storedChain, cdpWalletData as CDPWalletData);
+        const filteredTokens = portfolioData.tokens.filter((token) => parseFloat(token.balance) > 0);
+
+        setTokenHoldings(filteredTokens);
+        setCdpWalletAddress(portfolioData.cdpwalletAddress);
         console.log(data);
         setInputText('');
         setIsModalOpen(false);
       }catch(error){
         console.error("Error in execution :", axios.isAxiosError(error) ? error.response?.data.message : error);
-      }finally{
-        setLocalStorageState(true);
       }
     }
    
@@ -133,6 +155,15 @@ const Header: React.FC = () => {
         <Link href={'/'} className="flex items-center">
           <h1 className="text-white text-2xl font-bold ml-4">AI-Driven DeFi Vista</h1>
         </Link>
+        {
+          fetchCdpWalletData(chainId+"", address as string) && tokenHoldings.length ===0 && 
+          <ButtonOutline
+           onClick={fetchAssets}
+          >
+            fetch Assets
+          </ButtonOutline>
+        }
+       
         <button
           onClick={handleChatIconClick}
           className={`text-white mr-4 hover:text-gray-200 transition-colors ${tokenHoldings.length >0 ? '' : 'hidden'}`}
@@ -141,6 +172,8 @@ const Header: React.FC = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
         </button>
+       
+        
         <ConnectWallet />
       </div>
     </header>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -46,32 +47,31 @@ const AIRecommendations= () => {
   }, [fetchSignature, address, fetchCdpWalletData, chainId, getAiRiskRecommendations, fetchStoredChainId, tokenHoldings, tokenHoldingsChanged]);
   
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const renderContent = (content: any) => {
-    if (typeof content === 'string' || typeof content === 'number') {
-      return <p className="text-gray-700">{content}</p>;
-    } else if (Array.isArray(content)) {
-      return (
-        <ul className="list-disc list-inside">
-          {content.map((item, index) => (
-            <li key={index} className="text-gray-700">{renderContent(item)}</li>
-          ))}
-        </ul>
-      );
-    } else if (typeof content === 'object' && content !== null) {
-      return (
-        <div className="space-y-2">
-          {Object.entries(content).map(([key, value]) => (
-            <div key={key}>
-              <span className="font-semibold text-gray-900">{key}: </span>
-              {renderContent(value)}
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  // const renderContent = (content: any) => {
+  //   if (typeof content === 'string' || typeof content === 'number') {
+  //     return <p className="text-gray-700">{content}</p>;
+  //   } else if (Array.isArray(content)) {
+  //     return (
+  //       <ul className="list-disc list-inside">
+  //         {content.map((item, index) => (
+  //           <li key={index} className="text-gray-700">{renderContent(item)}</li>
+  //         ))}
+  //       </ul>
+  //     );
+  //   } else if (typeof content === 'object' && content !== null) {
+  //     return (
+  //       <div className="space-y-2">
+  //         {Object.entries(content).map(([key, value]) => (
+  //           <div key={key}>
+  //             <span className="font-semibold text-gray-900">{key}: </span>
+  //             {renderContent(value)}
+  //           </div>
+  //         ))}
+  //       </div>
+  //     );
+  //   }
+  //   return null;
+  // };
 
   return (
     // <motion.div
@@ -107,7 +107,9 @@ const AIRecommendations= () => {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          // 
           h3: ({ node, ...props }) => <h3 className="text-2xl font-bold mt-6 mb-4 text-indigo-700" {...props} />,
+         
           h4: ({ node, ...props }) => <h4 className="text-xl font-semibold mt-4 mb-2 text-purple-600" {...props} />,
           p: ({ node, ...props }) => <p className="mb-4 text-gray-700" {...props} />,
           ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-4" {...props} />,
