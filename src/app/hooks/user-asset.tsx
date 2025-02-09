@@ -1,3 +1,4 @@
+'use strict';
 import axios from "axios";
 import Chain from "../value-objects/chain";
 import { CDPWalletData, PortfolioResponse, TokenHolding } from "../types/Index";
@@ -14,7 +15,7 @@ export const useUserAsset = () => {
   }
   /** Fetch `cdpWalletData` from localStorage */
   const fetchCdpWalletData = (chainId:string,address:string) => {
-    const data = localStorage.getItem(getLocalStorageKey(chainId,address,'wallet-cred'));
+    const data = typeof window !== 'undefined' ? window.localStorage.getItem(getLocalStorageKey(chainId,address,'wallet-cred')) : null;
 
     return data ? 
       JSON.parse(data)as CDPWalletData
@@ -23,20 +24,21 @@ export const useUserAsset = () => {
 
   /** Fetch `storedChainId` from localStorage */
   const fetchStoredChainId = (chainId:string,address:string) => {
-    const data = localStorage.getItem(getLocalStorageKey(chainId,address,'chain'));
+    const data = typeof window !== 'undefined' ? window.localStorage.getItem(getLocalStorageKey(chainId,address,'chain')) : null;
     const chain = data ?Chain.fromUniqueProperty<Chain>("chainId", data) : null;
     return chain;
   }; 
 
   /** Fetch `signature` from localStorage */
   const fetchSignature = (chainId:string,address:string) => {
-    const data = localStorage.getItem(getLocalStorageKey(chainId,address,'signature'));
+    const data = typeof window !== 'undefined' ?  window.localStorage.getItem(getLocalStorageKey(chainId,address,'signature')) : null;
 
     return data ? data : null;
   };
 
   const fetchAiRecommendationsLocal = (chainId:string,address:string) => {
-    const data = localStorage.getItem(getLocalStorageKey(chainId,address,'ai-recommend'));
+
+    const data =  typeof window !== 'undefined' ? window.localStorage.getItem(getLocalStorageKey(chainId,address,'ai-recommend')) : null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return data ? JSON.parse(data) as {[key:number]:any} : null;
   }
@@ -92,11 +94,11 @@ export const useUserAsset = () => {
         const localAiRecommendations = fetchAiRecommendationsLocal(chain.getChainId()+"",address);
         if(localAiRecommendations) {
           const newLocalData = {...localAiRecommendations, [currentTimeStamp]: response.data.data};
-          localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'ai-recommend'), JSON.stringify(newLocalData));
+          if(typeof window !== 'undefined') window.localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'ai-recommend'), JSON.stringify(newLocalData));
           return newLocalData;
         }else{
           const newLocalData = {[currentTimeStamp]: response.data.data};
-          localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'ai-recommend'), JSON.stringify(newLocalData));
+          if(typeof window !== 'undefined') window.localStorage.setItem(getLocalStorageKey(chain.getChainId()+"",address,'ai-recommend'), JSON.stringify(newLocalData));
           return newLocalData;
         }
       }
