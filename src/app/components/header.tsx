@@ -153,7 +153,7 @@ const Header: React.FC = () => {
     <header className="bg-gradient-to-r from-purple-600 to-blue-600 p-4 shadow-lg">
       <div className="container mx-auto flex justify-between items-center">
         <Link href={'/'} className="flex items-center">
-          <h1 className="text-white text-2xl font-bold ml-4">AI-Driven DeFi Vista</h1>
+          <h1 className="text-white text-2xl font-bold ml-4">SmartFolio</h1>
         </Link>
         {
           fetchCdpWalletData(chainId+"", address as string) && tokenHoldings.length ===0 && 
